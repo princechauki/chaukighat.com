@@ -1,76 +1,61 @@
-<label>Select Video Source (Camera)</label>
-
-<select id="video-source"></select>
-
-<label>Select Audio Source (Microphone)</label>
-
-<select id="audio-source"></select>
-
-<label>Live Preview:</label>
-<!-- Important to set autoplay to true, otherwise the video won't play anything at the beginning -->
-<video autoplay="true" id="player" controls></video>
-<script>
-let videoSourcesSelect = document.getElementById("video-source");
-let audioSourcesSelect = document.getElementById("audio-source");
-let videoPlayer = document.getElementById("player");
-
-// Create Helper to ask for permission and list devices
-let MediaStreamHelper = {
-    // Property of the object to store the current stream
-    _stream: null,
-    // This method will return the promise to list the real devices
-    getDevices: function() {
-        return navigator.mediaDevices.enumerateDevices();
-    },
-    // Request user permissions to access the camera and video
-    requestStream: function() {
-        if (this._stream) {
-            this._stream.getTracks().forEach(track => {
-                track.stop();
-            });
+<html> 
+  <head></head> 
+  <body> 
+   
+      <div id='myPublisherDiv'></div>
+    <button onclick="switchCamera()">Switch Camera</button>
+    <script src='//static.opentok.com/v2/js/opentok.min.js'></script> 
+    <script> 
+       var publisher;
+    var apiKey    = "";
+        var publisher,subscriber;
+        var value = 'video deviceID';
+    var sessionId = "";
+        var token ="";
+        var session =  OT.initSession(apiKey,sessionId);
+        session.connect(token, function(error) {
+        if (error) {
+          console.log(error.message);
+        } else{
+         console.log("no error");  
+            publishVideo();        
+            
         }
-
-        const audioSource = audioSourcesSelect.value;
-        const videoSource = videoSourcesSelect.value;
-        const constraints = {
-            audio: {
-                deviceId: audioSource ? {exact: audioSource} : undefined
-            },
-            video: {
-                deviceId: videoSource ? {exact: videoSource} : undefined
-            }
-        };
-    
-        return navigator.mediaDevices.getUserMedia(constraints);
-    }
+      });
+    var pubOptions = { 
+width : 134, 
+height : 115, 
+showControls : false, 
+videoSource : value 
 };
-
-navigator.mediaDevices.enumerateDevices().then((devices) => {
-    let videoSourcesSelect = document.getElementById("video-source");
-    let audioSourcesSelect = document.getElementById("audio-source");
-
-    // Iterate over all the list of devices (InputDeviceInfo and MediaDeviceInfo)
-    devices.forEach((device) => {
-        let option = new Option();
-        option.value = device.deviceId;
-
-        // According to the type of media device
-        switch(device.kind){
-            // Append device to list of Cameras
-            case "videoinput":
-                option.text = device.label || `Camera ${videoSourcesSelect.length + 1}`;
-                videoSourcesSelect.appendChild(option);
-                break;
-            // Append device to list of Microphone
-            case "audioinput":
-                option.text = device.label || `Microphone ${videoSourcesSelect.length + 1}`;
-                audioSourcesSelect.appendChild(option);
-                break;
+     function publishVideo(){
+               publisher=  OT.initPublisher("myPublisherDiv",pubOptions, function (error) {
+  if (error) {
+    console.log(error);
+  } else {
+      
+    console.log("Publisher initialized.");
+      session.publish(publisher,function(error){
+      if(!error){
+       console.log("no error in publishing");
+          
+      }
+      }).on("streamDestroyed",function(event){
+        event.preventDefault();
+          console.log("streamDestroyed");
+            publishVideo();
+        
+        });
+    
         }
-
-        console.log(device);
-    });
-}).catch(function (e) {
-    console.log(e.name + ": " + e.message);
-});
-</script>
+        });
+            
+     }
+       
+        function switchCamera(){
+        session.unpublish(publisher);
+          
+        }
+    </script> 
+  </body> 
+</html>      
