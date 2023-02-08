@@ -1,0 +1,47 @@
+<label>Select Video Source (Camera)</label>
+
+<select id="video-source"></select>
+
+<label>Select Audio Source (Microphone)</label>
+
+<select id="audio-source"></select>
+
+<label>Live Preview:</label>
+<!-- Important to set autoplay to true, otherwise the video won't play anything at the beginning -->
+<video autoplay="true" id="player" controls></video>
+<script>
+let videoSourcesSelect = document.getElementById("video-source");
+let audioSourcesSelect = document.getElementById("audio-source");
+let videoPlayer = document.getElementById("player");
+
+// Create Helper to ask for permission and list devices
+let MediaStreamHelper = {
+    // Property of the object to store the current stream
+    _stream: null,
+    // This method will return the promise to list the real devices
+    getDevices: function() {
+        return navigator.mediaDevices.enumerateDevices();
+    },
+    // Request user permissions to access the camera and video
+    requestStream: function() {
+        if (this._stream) {
+            this._stream.getTracks().forEach(track => {
+                track.stop();
+            });
+        }
+
+        const audioSource = audioSourcesSelect.value;
+        const videoSource = videoSourcesSelect.value;
+        const constraints = {
+            audio: {
+                deviceId: audioSource ? {exact: audioSource} : undefined
+            },
+            video: {
+                deviceId: videoSource ? {exact: videoSource} : undefined
+            }
+        };
+    
+        return navigator.mediaDevices.getUserMedia(constraints);
+    }
+};
+</script>
