@@ -1,0 +1,13 @@
+ .container{
+            margin-top: 50px;
+            width: 400px;
+        }
+
+        .pane {
+            margin: 20px;
+            text-align: center;
+        }
+
+        video {
+            width: 100%;
+        }
