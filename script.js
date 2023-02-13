@@ -1,124 +1,122 @@
-var room;
+import Skylink, { SkylinkEventManager, SkylinkConstants, SkylinkEvents, SkylinkLogger } from "https://cdn.temasys.io/skylink/skylinkjs/2.4.0.1/skylink.complete.js"
 
-// when Bistri API client is ready, function
-// "onBistriConferenceReady" is invoked
-onBistriConferenceReady = function () {
-
-    // test if the browser is WebRTC compatible
-    if ( !BistriConference.isCompatible() ) {
-        // if the browser is not compatible, display an alert
-        alert( "your browser is not WebRTC compatible !" );
-        // then stop the script execution
-        return;
-    }
-
-    // initialize API client with application keys
-    // if you don't have your own, you can get them at:
-    // https://api.developers.bistri.com/login
-    BistriConference.init( {
-        appId: "7a5eebc7",
-            appKey: "4465c0d6fb1f64b3d870e90e93080b57",
-    } );
-
-    /* Set events handler */
-
-    // when local user is connected to the server
-    BistriConference.signaling.addHandler( "onConnected", function () {
-        // show pane with id "pane_1"
-        showPanel( "pane_1" );
-    } );
-
-    // when an error occured on the server side
-    BistriConference.signaling.addHandler( "onError", function ( error ) {
-        // display an alert message
-        alert( error.text + " (" + error.code + ")" );
-    } );
-
-    // when the user has joined a room
-    BistriConference.signaling.addHandler( "onJoinedRoom", function ( data ) {
-        // set the current room name
-        room = data.room;
-        // ask the user to access to his webcam
-        BistriConference.startStream( "webcamSD", function( localStream ){
-            // when webcam access has been granted
-            // show pane with id "pane_2"
-            showPanel( "pane_2" );
-            // insert the local webcam stream into div#video_container node
-            BistriConference.attachStream( localStream, q( "#video_container" ) );
-            // then, for every single members present in the room ...
-            for ( var i=0, max=data.members.length; i<max; i++ ) {
-                // ... request a call
-                BistriConference.call( data.members[ i ].id, data.room );
-            }
-        } );
-    } );
-
-    // when an error occurred while trying to join a room
-    BistriConference.signaling.addHandler( "onJoinRoomError", function ( error ) {
-        // display an alert message
-       alert( error.text + " (" + error.code + ")" );
-    } );
-
-    // when the local user has quitted the room
-    BistriConference.signaling.addHandler( "onQuittedRoom", function( room ) {
-        // show pane with id "pane_1"
-        showPanel( "pane_1" );
-        // stop the local stream
-        BistriConference.stopStream();
-    } );
-
-    // when a new remote stream is received
-    BistriConference.streams.addHandler( "onStreamAdded", function ( remoteStream ) {
-        // insert the new remote stream into div#video_container node
-        BistriConference.attachStream( remoteStream, q( "#video_container" ) );
-    } );
-
-    // when a local or a remote stream has been stopped
-    BistriConference.streams.addHandler( "onStreamClosed", function ( stream ) {
-        // remove the stream from the page
-        BistriConference.detachStream( stream );
-    } );
-
-    // bind function "joinConference" to button "Join Conference Room"
-    q( "#join" ).addEventListener( "click", joinConference );
-
-    // bind function "quitConference" to button "Quit Conference Room"
-    q( "#quit" ).addEventListener( "click", quitConference );
-
-    // open a new session on the server
-    BistriConference.connect();
+const initOptions = {
+  appKey: '474e3b65-6075-45b7-838b-6a211813cb7d', // Get your own key at https://console.temasys.io
+  defaultRoom: 'temasys-codepen-2.x-safari'//getRoomId();
 }
 
-// when button "Join Conference Room" has been clicked
-function joinConference(){
-    var roomToJoin = q( "#room_field" ).value;
-    // if "Conference Name" field is not empty ...
-    if( roomToJoin ){
-        // ... join the room
-        BistriConference.joinRoom( roomToJoin );
-    }
-    else{
-        // otherwise, display an alert
-        alert( "you must enter a room name !" )
-    }
+let skylink;
+
+try {
+  skylink = new Skylink(initOptions)
+  SkylinkLogger.setLevel(SkylinkLogger.logLevels.TRACE);
+  console.log(skylink.getSdkVersion());
+  document.getElementById('status').innerHTML = 'Room information has been loaded. Room is ready for user to join.';
+    document.getElementById('start').style.display = 'block';
+} catch (err) {
+  document.getElementById('status').innerHTML = 'Failed retrieval for room information.<br>Error: ' + (err.message || err.error);
 }
 
-// when button "Quit Conference Room" has been clicked
-function quitConference(){
-    // quit the current conference room
-    BistriConference.quitRoom( room );
-}
+SkylinkEventManager.addEventListener(SkylinkEvents.MEDIA_ACCESS_SUCCESS, (evt) => {
+  console.log("MEDIA_ACCESS_SUCCESS", evt);
+  let vid;
+  let aud;
+  const { isVideo, isAudio, stream } = evt.detail;
+  if  (isVideo) {
+    vid = document.getElementById('myvideo');
+    attachMediaStream(vid, stream);
+       setTimeout(() => {
+    vid.controls = false;
+  }, 1000);
+  } else {
+    aud = document.getElementById('myaudio');
+    attachMediaStream(aud, stream);
+       setTimeout(() => {
+    aud.controls = false;
+  }, 1000);
+  }
+})
 
-function showPanel( id ){
-    var panes = document.querySelectorAll( ".pane" );
-    // for all nodes matching the query ".pane"
-    for( var i=0, max=panes.length; i<max; i++ ){
-        // hide all nodes except the one to show
-        panes[ i ].style.display = panes[ i ].id == id ? "block" : "none";
-    };
-}
+SkylinkEventManager.addEventListener(SkylinkEvents.READY_STATE_CHANGE, (evt) => {
+  console.log("READY_STATE_CHANGE", evt);
+})
 
-function q( query ){
-    // return the DOM node matching the query
-    return document.querySelector( query );
-}
+SkylinkEventManager.addEventListener(SkylinkEvents.PEER_JOINED, (evt) => {
+  console.log("PEER_JOINED", evt);
+  const { isSelf, peerId } = evt.detail;
+  if(isSelf) return; // We already have a video element for our video and don't need to create a new one.
+  const vid = document.createElement('video');
+  vid.autoplay = true;
+  vid.controls = true;
+  vid.setAttribute('playsinline', true);
+  vid.id = `${peerId}_video`;
+  document.body.appendChild(vid);
+  
+  const aud = document.createElement('audio');
+  aud.autoplay = true;
+  aud.controls = true;
+  aud.setAttribute('playsinline', true);
+  aud.id = `${peerId}_audio`;
+  document.body.appendChild(aud);
+  
+  setTimeout(() => {
+    aud.controls = false;
+    vid.controls = false;
+  }, 1000);
+})
+
+SkylinkEventManager.addEventListener(SkylinkEvents.ON_INCOMING_STREAM, (evt) => {
+  const { isSelf, peerId, stream, isAudio, isVideo } = evt.detail;
+  if(isSelf) return;
+  console.log("ON_INCOMING_STREAM", evt, evt.detail.stream.getTracks()[0]);
+  if  (isVideo) {
+      const vid = document.getElementById(`${peerId}_video`);
+      attachMediaStream(vid, stream);
+  } else if (isAudio) {
+      const aud = document.getElementById(`${peerId}_audio`);
+      attachMediaStream(aud, stream);
+  } else {
+    console.error("Stream kind not recognized");
+  }
+})
+
+SkylinkEventManager.addEventListener(SkylinkEvents.PEER_LEFT, (evt) => {
+  console.log("PEER_LEFT", evt);
+  const { peerId } = evt.detail;
+  const vid = document.getElementById(`${peerId}_video`);
+  document.body.removeChild(vid);
+  const aud = document.getElementById(`${peerId}_audio`);
+  document.body.removeChild(aud);
+})
+
+document.getElementById("start_btn").addEventListener("click", () => {
+  event.target.style.visibility = 'hidden';
+  
+  skylink.joinRoom({
+    audio: true,
+    video: true
+  })
+  .then((streams) => {
+    document.getElementById('status').innerHTML = 'Joined room.';
+  })
+    .catch((err) => {
+   document.getElementById('status').innerHTML = 'Failed joining room.<br>' +
+  'Error: ' + (err.message || err.error);
+  });
+})
+
+/* Helper functions */
+
+function getRoomId() {
+  var roomId = document.cookie.match(/roomId=([a-z0-9-]{36})/);
+  if(roomId) {
+    return roomId[1];
+  }
+  else {
+    roomId = skylink.generateUUID();
+    var date = new Date();
+    date.setTime(date.getTime() + (30*24*60*60*1000));
+    document.cookie = 'roomId=' + roomId + '; expires=' + date.toGMTString() + '; path=/';
+    return roomId;
+  }
+};
