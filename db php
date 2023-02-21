@@ -1,0 +1,13 @@
+<?php 
+
+$conn = mysqli_connect("0.0.0.0","root","root","new_task");
+
+// if(!$conn){
+
+// 	die("Connection Failed!");
+// }
+// else {
+
+// 	echo "success";
+// }
+?>
