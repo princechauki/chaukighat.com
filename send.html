@@ -251,5 +251,10 @@
                 initialize();
             })();
         </script>
+        <script>navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  .then(stream => video.srcObject = stream)
+  .catch(e => log(e.name + ": "+ e.message));
+
+var log = msg => div.innerHTML += msg + "<br>";</script>
     </body>
 </html>
